@@ -43,8 +43,8 @@ pred_wrapper <- function(object, newdata) {
 
 set.seed(42)
 shap_values <- fastshap::explain(
-  modelo_rf, X = X_train, pred_wrapper = pred_wrapper,
-  newdata = X_shap, nsim = 15  # numero de permutaciones Monte Carlo por instancia/variable
+  modelo_rf, X = as.data.frame(X_train), pred_wrapper = pred_wrapper,
+  newdata = as.data.frame(X_shap), nsim = 15  # numero de permutaciones Monte Carlo por instancia/variable
 )
 
 sv_df <- as.data.frame(shap_values)
