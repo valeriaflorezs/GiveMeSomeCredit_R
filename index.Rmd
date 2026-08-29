@@ -1,6 +1,6 @@
 ---
 title: "Give Me Some Credit — Análisis Exploratorio de Datos (EDA)"
-author: "Valeria Florez"
+author: "Valeria Florez y Katherin Barrera"
 date: "`r Sys.Date()`"
 site: bookdown::bookdown_site
 output: bookdown::gitbook
