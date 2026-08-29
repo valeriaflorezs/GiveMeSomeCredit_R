@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+<head>
+
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <title>Give Me Some Credit — Análisis Exploratorio de Datos (EDA)</title>
+  <meta name="description" content="Give Me Some Credit — Análisis Exploratorio de Datos (EDA)" />
+  <meta name="generator" content="bookdown 0.46 and GitBook 2.6.7" />
+
+  <meta property="og:title" content="Give Me Some Credit — Análisis Exploratorio de Datos (EDA)" />
+  <meta property="og:type" content="book" />
+  
+  
+  
+
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Give Me Some Credit — Análisis Exploratorio de Datos (EDA)" />
+  
+  
+  
+
+<meta name="author" content="Valeria Florez" />
+
+
+<meta name="date" content="2026-08-28" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  
+  
+
+<link rel="next" href="carga-datos.html"/>
+<script src="libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fuse.js@6.4.6/dist/fuse.min.js"></script>
+<link href="libs/gitbook-2.6.7/css/style.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-table.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-bookdown.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-highlight.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-search.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-fontsettings.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-clipboard.css" rel="stylesheet" />
+
+
+
+
+
+
+
+
+<link href="libs/anchor-sections-1.1.0/anchor-sections.css" rel="stylesheet" />
+<link href="libs/anchor-sections-1.1.0/anchor-sections-hash.css" rel="stylesheet" />
+<script src="libs/anchor-sections-1.1.0/anchor-sections.js"></script>
+<link href="libs/htmltools-fill-0.5.8.1/fill.css" rel="stylesheet" />
+<script src="libs/htmlwidgets-1.6.4/htmlwidgets.js"></script>
+<script src="libs/plotly-binding-4.12.1/plotly.js"></script>
+<script src="libs/typedarray-0.1/typedarray.min.js"></script>
+<link href="libs/crosstalk-1.2.2/css/crosstalk.min.css" rel="stylesheet" />
+<script src="libs/crosstalk-1.2.2/js/crosstalk.min.js"></script>
+<link href="libs/plotly-htmlwidgets-css-2.25.2/plotly-htmlwidgets.css" rel="stylesheet" />
+<script src="libs/plotly-main-2.25.2/plotly-latest.min.js"></script>
+<script src="libs/core-js-2.5.3/shim.min.js"></script>
+<script src="libs/react-18.2.0/react.min.js"></script>
+<script src="libs/react-18.2.0/react-dom.min.js"></script>
+<script src="libs/reactwidget-2.0.0/react-tools.js"></script>
+<link href="libs/reactable-0.4.5/reactable.css" rel="stylesheet" />
+<script src="libs/reactable-binding-0.4.5/reactable.js"></script>
+
+
+<style type="text/css">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { color: #008000; } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { color: #008000; font-weight: bold; } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+<style type="text/css">
+  
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+</style>
+
+</head>
+
+<body>
+
+
+
+  <div class="book without-animation with-summary font-size-2 font-family-1" data-basepath=".">
+
+    <div class="book-summary">
+      <nav role="navigation">
+
+<ul class="summary">
+<li class="chapter" data-level="1" data-path="index.html"><a href="index.html"><i class="fa fa-check"></i><b>1</b> Introducción</a>
+<ul>
+<li class="chapter" data-level="1.1" data-path="index.html"><a href="index.html#carga-de-librer%C3%ADas"><i class="fa fa-check"></i><b>1.1</b> Carga de librerías</a></li>
+<li class="chapter" data-level="1.2" data-path="index.html"><a href="index.html#tipo-y-descripci%C3%B3n-de-las-variables"><i class="fa fa-check"></i><b>1.2</b> Tipo y descripción de las variables</a></li>
+</ul></li>
+<li class="chapter" data-level="2" data-path="carga-datos.html"><a href="carga-datos.html"><i class="fa fa-check"></i><b>2</b> Carga y calidad de datos</a>
+<ul>
+<li class="chapter" data-level="2.1" data-path="carga-datos.html"><a href="carga-datos.html#valores-faltantes"><i class="fa fa-check"></i><b>2.1</b> Valores faltantes</a></li>
+</ul></li>
+<li class="chapter" data-level="3" data-path="target.html"><a href="target.html"><i class="fa fa-check"></i><b>3</b> Análisis de la variable objetivo</a></li>
+<li class="chapter" data-level="4" data-path="univariado.html"><a href="univariado.html"><i class="fa fa-check"></i><b>4</b> Análisis univariado detallado</a>
+<ul>
+<li class="chapter" data-level="4.1" data-path="univariado.html"><a href="univariado.html#estad%C3%ADsticos-descriptivos-completos"><i class="fa fa-check"></i><b>4.1</b> Estadísticos descriptivos completos</a></li>
+<li class="chapter" data-level="4.2" data-path="univariado.html"><a href="univariado.html#visualizaci%C3%B3n-por-variable"><i class="fa fa-check"></i><b>4.2</b> Visualización por variable</a></li>
+<li class="chapter" data-level="4.3" data-path="univariado.html"><a href="univariado.html#interpretaci%C3%B3n"><i class="fa fa-check"></i><b>4.3</b> Interpretación</a></li>
+</ul></li>
+<li class="chapter" data-level="5" data-path="bivariado.html"><a href="bivariado.html"><i class="fa fa-check"></i><b>5</b> Análisis bivariado</a>
+<ul>
+<li class="chapter" data-level="5.1" data-path="bivariado.html"><a href="bivariado.html#pruebas-de-hip%C3%B3tesis-y-comparaci%C3%B3n-de-grupos"><i class="fa fa-check"></i><b>5.1</b> Pruebas de hipótesis y comparación de grupos</a></li>
+<li class="chapter" data-level="5.2" data-path="bivariado.html"><a href="bivariado.html#visualizaciones-segmentadas-por-morosidad"><i class="fa fa-check"></i><b>5.2</b> Visualizaciones segmentadas por morosidad</a></li>
+<li class="chapter" data-level="5.3" data-path="bivariado.html"><a href="bivariado.html#insight-financiero-por-variable"><i class="fa fa-check"></i><b>5.3</b> Insight financiero por variable</a></li>
+</ul></li>
+<li class="chapter" data-level="6" data-path="multicolinealidad.html"><a href="multicolinealidad.html"><i class="fa fa-check"></i><b>6</b> Multicolinealidad</a>
+<ul>
+<li class="chapter" data-level="6.1" data-path="multicolinealidad.html"><a href="multicolinealidad.html#matriz-de-correlaci%C3%B3n"><i class="fa fa-check"></i><b>6.1</b> Matriz de correlación</a></li>
+<li class="chapter" data-level="6.2" data-path="multicolinealidad.html"><a href="multicolinealidad.html#factor-de-inflaci%C3%B3n-de-la-varianza-vif"><i class="fa fa-check"></i><b>6.2</b> Factor de Inflación de la Varianza (VIF)</a></li>
+<li class="chapter" data-level="6.3" data-path="multicolinealidad.html"><a href="multicolinealidad.html#coordenadas-paralelas-interacci%C3%B3n-conjunta-entre-variables-correlacionadas"><i class="fa fa-check"></i><b>6.3</b> Coordenadas paralelas: interacción conjunta entre variables correlacionadas</a></li>
+</ul></li>
+<li class="chapter" data-level="7" data-path="shap.html"><a href="shap.html"><i class="fa fa-check"></i><b>7</b> PARTE 4: Interpretabilidad avanzada con SHAP</a>
+<ul>
+<li class="chapter" data-level="7.1" data-path="shap.html"><a href="shap.html#importancia-global-interactiva-mean-shap"><i class="fa fa-check"></i><b>7.1</b> Importancia global interactiva (mean |SHAP|)</a></li>
+<li class="chapter" data-level="7.2" data-path="shap.html"><a href="shap.html#beeswarm-interactivo-todas-las-variables"><i class="fa fa-check"></i><b>7.2</b> Beeswarm interactivo (todas las variables)</a></li>
+<li class="chapter" data-level="7.3" data-path="shap.html"><a href="shap.html#gr%C3%A1fico-de-dependencia-interactivo"><i class="fa fa-check"></i><b>7.3</b> Gráfico de dependencia interactivo</a></li>
+<li class="chapter" data-level="7.4" data-path="shap.html"><a href="shap.html#interpretabilidad"><i class="fa fa-check"></i><b>7.4</b> Interpretabilidad</a></li>
+</ul></li>
+</ul>
+
+      </nav>
+    </div>
+
+    <div class="book-body">
+      <div class="body-inner">
+        <div class="book-header" role="navigation">
+          <h1>
+            <i class="fa fa-circle-o-notch fa-spin"></i><a href="./">Give Me Some Credit — Análisis Exploratorio de Datos (EDA)</a>
+          </h1>
+        </div>
+
+        <div class="page-wrapper" tabindex="-1" role="main">
+          <div class="page-inner">
+
+            <section class="normal" id="section-">
+<div id="header">
+<h1 class="title">Give Me Some Credit — Análisis Exploratorio de Datos (EDA)</h1>
+<p class="author"><em>Valeria Florez</em></p>
+<p class="date"><em>2026-08-28</em></p>
+</div>
+<div id="index" class="section level1 hasAnchor" number="1">
+<h1><span class="header-section-number">1</span> Introducción<a href="index.html#index" class="anchor-section" aria-label="Anchor link to header"></a></h1>
+<p>Este conjunto de datos Give Me Some Credit, disponible en la plataforma Kaggle. El cual, corresponde a una competencia de predicción del riesgo crediticio, cuyo objetivo es analizar información financiera y de comportamiento de los clientes para determinar la probabilidad de que una persona presente dificultades financieras en el futuro. Asi mismo contiene información relacionada con diferentes características de los clientes, como su edad, ingresos mensuales, número de préstamos, utilización de líneas de crédito, historial de pagos y cantidad de veces que ha presentado retrasos en sus obligaciones financieras.</p>
+<p>La variable objetivo del dataset es <strong>SeriousDlqin2yrs</strong>, que indica si una persona experimentó una situación de morosidad grave durante los siguientes dos años. Esta variable permite plantear el problema como una tarea de clasificación binaria, donde se busca diferenciar entre clientes que presentaron <strong>(1)</strong> y que no presentaron <strong>(0)</strong> dificultades financieras graves.</p>
+<div id="carga-de-librerías" class="section level2 hasAnchor" number="1.1">
+<h2><span class="header-section-number">1.1</span> Carga de librerías<a href="index.html#carga-de-librer%C3%ADas" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p>Paquetes necesarios (ejecutar una sola vez si no están instalados):</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="index.html#cb1-1" tabindex="-1"></a><span class="fu">install.packages</span>(<span class="fu">c</span>(<span class="st">&quot;tidyverse&quot;</span>, <span class="st">&quot;plotly&quot;</span>, <span class="st">&quot;reactable&quot;</span>, <span class="st">&quot;scales&quot;</span>,</span>
+<span id="cb1-2"><a href="index.html#cb1-2" tabindex="-1"></a>                    <span class="st">&quot;randomForest&quot;</span>, <span class="st">&quot;fastshap&quot;</span>, <span class="st">&quot;bookdown&quot;</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="index.html#cb2-1" tabindex="-1"></a><span class="fu">library</span>(tidyverse)   <span class="co"># readr, dplyr, tidyr, ggplot2, purrr</span></span>
+<span id="cb2-2"><a href="index.html#cb2-2" tabindex="-1"></a><span class="fu">library</span>(plotly)      <span class="co"># graficos interactivos</span></span>
+<span id="cb2-3"><a href="index.html#cb2-3" tabindex="-1"></a><span class="fu">library</span>(reactable)   <span class="co"># tablas interactivas con color</span></span>
+<span id="cb2-4"><a href="index.html#cb2-4" tabindex="-1"></a><span class="fu">library</span>(scales)      <span class="co"># paletas y formateo de numeros</span></span>
+<span id="cb2-5"><a href="index.html#cb2-5" tabindex="-1"></a><span class="fu">library</span>(randomForest) <span class="co"># modelo para la seccion de SHAP</span></span>
+<span id="cb2-6"><a href="index.html#cb2-6" tabindex="-1"></a><span class="fu">library</span>(fastshap)     <span class="co"># valores SHAP aproximados</span></span>
+<span id="cb2-7"><a href="index.html#cb2-7" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="index.html#cb2-8" tabindex="-1"></a>knitr<span class="sc">::</span>opts_chunk<span class="sc">$</span><span class="fu">set</span>(<span class="at">message =</span> <span class="cn">FALSE</span>, <span class="at">warning =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb2-9"><a href="index.html#cb2-9" tabindex="-1"></a><span class="fu">options</span>(<span class="at">scipen =</span> <span class="dv">999</span>)</span></code></pre></div>
+<p>Paleta de colores pastel (la misma en todo el libro, para mantener coherencia visual) y las escalas de color que usaremos en gráficos y tablas.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="index.html#cb3-1" tabindex="-1"></a>PALETTE <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb3-2"><a href="index.html#cb3-2" tabindex="-1"></a>  <span class="at">lila          =</span> <span class="st">&quot;#B39DDB&quot;</span>, <span class="co"># variable binaria / clase &quot;No moroso&quot; (0)</span></span>
+<span id="cb3-3"><a href="index.html#cb3-3" tabindex="-1"></a>  <span class="at">lavanda       =</span> <span class="st">&quot;#C5CAE9&quot;</span>, <span class="co"># histogramas</span></span>
+<span id="cb3-4"><a href="index.html#cb3-4" tabindex="-1"></a>  <span class="at">rosa          =</span> <span class="st">&quot;#F48FB1&quot;</span>, <span class="co"># KDE / clase &quot;Moroso&quot; (1)</span></span>
+<span id="cb3-5"><a href="index.html#cb3-5" tabindex="-1"></a>  <span class="at">menta         =</span> <span class="st">&quot;#80CBC4&quot;</span>, <span class="co"># boxplots / valores &quot;sin problema&quot;</span></span>
+<span id="cb3-6"><a href="index.html#cb3-6" tabindex="-1"></a>  <span class="at">malva         =</span> <span class="st">&quot;#CE93D8&quot;</span>, <span class="co"># violines</span></span>
+<span id="cb3-7"><a href="index.html#cb3-7" tabindex="-1"></a>  <span class="at">morado_oscuro =</span> <span class="st">&quot;#5E35B1&quot;</span>, <span class="co"># acentos y subtitulos</span></span>
+<span id="cb3-8"><a href="index.html#cb3-8" tabindex="-1"></a>  <span class="at">texto         =</span> <span class="st">&quot;#4A3E56&quot;</span>, <span class="co"># titulos y texto de las graficas</span></span>
+<span id="cb3-9"><a href="index.html#cb3-9" tabindex="-1"></a>  <span class="at">fondo_boton   =</span> <span class="st">&quot;#F3E5F5&quot;</span>, <span class="co"># fondo de botones interactivos</span></span>
+<span id="cb3-10"><a href="index.html#cb3-10" tabindex="-1"></a>  <span class="at">borde_boton   =</span> <span class="st">&quot;#E1BEE7&quot;</span>, <span class="co"># borde de botones interactivos</span></span>
+<span id="cb3-11"><a href="index.html#cb3-11" tabindex="-1"></a>  <span class="at">alerta        =</span> <span class="st">&quot;#C62828&quot;</span>  <span class="co"># rojo de alerta para valores criticos</span></span>
+<span id="cb3-12"><a href="index.html#cb3-12" tabindex="-1"></a>)</span>
+<span id="cb3-13"><a href="index.html#cb3-13" tabindex="-1"></a></span>
+<span id="cb3-14"><a href="index.html#cb3-14" tabindex="-1"></a>TITULO_FONT <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">size =</span> <span class="dv">18</span>, <span class="at">color =</span> PALETTE<span class="sc">$</span>texto)</span>
+<span id="cb3-15"><a href="index.html#cb3-15" tabindex="-1"></a>BOTON_ESTILO <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">bgcolor =</span> PALETTE<span class="sc">$</span>fondo_boton, <span class="at">bordercolor =</span> PALETTE<span class="sc">$</span>borde_boton,</span>
+<span id="cb3-16"><a href="index.html#cb3-16" tabindex="-1"></a>                      <span class="at">font =</span> <span class="fu">list</span>(<span class="at">size =</span> <span class="dv">11</span>, <span class="at">color =</span> PALETTE<span class="sc">$</span>texto))</span>
+<span id="cb3-17"><a href="index.html#cb3-17" tabindex="-1"></a></span>
+<span id="cb3-18"><a href="index.html#cb3-18" tabindex="-1"></a><span class="co"># Escala divergente (matriz de correlacion, SHAP): morado oscuro &lt;-&gt; lavanda &lt;-&gt; rosa</span></span>
+<span id="cb3-19"><a href="index.html#cb3-19" tabindex="-1"></a>ESCALA_DIVERGENTE <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb3-20"><a href="index.html#cb3-20" tabindex="-1"></a>  <span class="fu">list</span>(<span class="fl">0.0</span>, PALETTE<span class="sc">$</span>morado_oscuro),</span>
+<span id="cb3-21"><a href="index.html#cb3-21" tabindex="-1"></a>  <span class="fu">list</span>(<span class="fl">0.5</span>, PALETTE<span class="sc">$</span>fondo_boton),</span>
+<span id="cb3-22"><a href="index.html#cb3-22" tabindex="-1"></a>  <span class="fu">list</span>(<span class="fl">1.0</span>, PALETTE<span class="sc">$</span>rosa)</span>
+<span id="cb3-23"><a href="index.html#cb3-23" tabindex="-1"></a>)</span>
+<span id="cb3-24"><a href="index.html#cb3-24" tabindex="-1"></a></span>
+<span id="cb3-25"><a href="index.html#cb3-25" tabindex="-1"></a><span class="co"># Escala secuencial de magnitud, sin connotacion buena/mala: lavanda -&gt; lila -&gt; morado oscuro</span></span>
+<span id="cb3-26"><a href="index.html#cb3-26" tabindex="-1"></a>ESCALA_MAGNITUD <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb3-27"><a href="index.html#cb3-27" tabindex="-1"></a>  <span class="fu">list</span>(<span class="fl">0.0</span>, PALETTE<span class="sc">$</span>fondo_boton),</span>
+<span id="cb3-28"><a href="index.html#cb3-28" tabindex="-1"></a>  <span class="fu">list</span>(<span class="fl">0.5</span>, PALETTE<span class="sc">$</span>lila),</span>
+<span id="cb3-29"><a href="index.html#cb3-29" tabindex="-1"></a>  <span class="fu">list</span>(<span class="fl">1.0</span>, PALETTE<span class="sc">$</span>morado_oscuro)</span>
+<span id="cb3-30"><a href="index.html#cb3-30" tabindex="-1"></a>)</span>
+<span id="cb3-31"><a href="index.html#cb3-31" tabindex="-1"></a></span>
+<span id="cb3-32"><a href="index.html#cb3-32" tabindex="-1"></a><span class="co"># Escala de alerta (0 = neutro, valores altos = criticos): lavanda -&gt; rosa -&gt; rojo</span></span>
+<span id="cb3-33"><a href="index.html#cb3-33" tabindex="-1"></a>ESCALA_ALERTA <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb3-34"><a href="index.html#cb3-34" tabindex="-1"></a>  <span class="fu">list</span>(<span class="fl">0.0</span>, PALETTE<span class="sc">$</span>fondo_boton),</span>
+<span id="cb3-35"><a href="index.html#cb3-35" tabindex="-1"></a>  <span class="fu">list</span>(<span class="fl">0.5</span>, PALETTE<span class="sc">$</span>rosa),</span>
+<span id="cb3-36"><a href="index.html#cb3-36" tabindex="-1"></a>  <span class="fu">list</span>(<span class="fl">1.0</span>, PALETTE<span class="sc">$</span>alerta)</span>
+<span id="cb3-37"><a href="index.html#cb3-37" tabindex="-1"></a>)</span>
+<span id="cb3-38"><a href="index.html#cb3-38" tabindex="-1"></a></span>
+<span id="cb3-39"><a href="index.html#cb3-39" tabindex="-1"></a><span class="co"># Vectores de color (para reactable / gradientes en tablas), construidos con la misma paleta pastel</span></span>
+<span id="cb3-40"><a href="index.html#cb3-40" tabindex="-1"></a>PAL_SEMAFORO    <span class="ot">&lt;-</span> <span class="fu">c</span>(PALETTE<span class="sc">$</span>menta, PALETTE<span class="sc">$</span>fondo_boton, PALETTE<span class="sc">$</span>alerta)</span>
+<span id="cb3-41"><a href="index.html#cb3-41" tabindex="-1"></a>PAL_MAGNITUD    <span class="ot">&lt;-</span> <span class="fu">c</span>(PALETTE<span class="sc">$</span>fondo_boton, PALETTE<span class="sc">$</span>lila, PALETTE<span class="sc">$</span>morado_oscuro)</span>
+<span id="cb3-42"><a href="index.html#cb3-42" tabindex="-1"></a>PAL_DISPERSION  <span class="ot">&lt;-</span> <span class="fu">c</span>(PALETTE<span class="sc">$</span>fondo_boton, PALETTE<span class="sc">$</span>malva, PALETTE<span class="sc">$</span>morado_oscuro)</span>
+<span id="cb3-43"><a href="index.html#cb3-43" tabindex="-1"></a>PAL_ALERTA      <span class="ot">&lt;-</span> <span class="fu">c</span>(PALETTE<span class="sc">$</span>fondo_boton, PALETTE<span class="sc">$</span>rosa, PALETTE<span class="sc">$</span>alerta)</span>
+<span id="cb3-44"><a href="index.html#cb3-44" tabindex="-1"></a></span>
+<span id="cb3-45"><a href="index.html#cb3-45" tabindex="-1"></a><span class="co">#&#39; Genera una funcion de estilo de celda (para reactable::colDef) que reproduce</span></span>
+<span id="cb3-46"><a href="index.html#cb3-46" tabindex="-1"></a><span class="co">#&#39; un degradado de color tipo pandas Styler.background_gradient()</span></span>
+<span id="cb3-47"><a href="index.html#cb3-47" tabindex="-1"></a><span class="co">#&#39; @param valores vector numerico sobre el que se calcula el dominio del color</span></span>
+<span id="cb3-48"><a href="index.html#cb3-48" tabindex="-1"></a><span class="co">#&#39; @param paleta vector de colores (2 o mas) para scales::col_numeric</span></span>
+<span id="cb3-49"><a href="index.html#cb3-49" tabindex="-1"></a><span class="co">#&#39; @param dominio opcional, c(min, max) fijo en vez de range(valores)</span></span>
+<span id="cb3-50"><a href="index.html#cb3-50" tabindex="-1"></a>estilo_gradiente <span class="ot">&lt;-</span> <span class="cf">function</span>(valores, paleta, <span class="at">dominio =</span> <span class="cn">NULL</span>) {</span>
+<span id="cb3-51"><a href="index.html#cb3-51" tabindex="-1"></a>  rango <span class="ot">&lt;-</span> <span class="cf">if</span> (<span class="fu">is.null</span>(dominio)) <span class="fu">range</span>(valores, <span class="at">na.rm =</span> <span class="cn">TRUE</span>) <span class="cf">else</span> dominio</span>
+<span id="cb3-52"><a href="index.html#cb3-52" tabindex="-1"></a>  mapa_color <span class="ot">&lt;-</span> scales<span class="sc">::</span><span class="fu">col_numeric</span>(paleta, <span class="at">domain =</span> rango)</span>
+<span id="cb3-53"><a href="index.html#cb3-53" tabindex="-1"></a>  <span class="cf">function</span>(value) {</span>
+<span id="cb3-54"><a href="index.html#cb3-54" tabindex="-1"></a>    <span class="fu">list</span>(<span class="at">background =</span> <span class="fu">mapa_color</span>(value), <span class="at">color =</span> PALETTE<span class="sc">$</span>texto)</span>
+<span id="cb3-55"><a href="index.html#cb3-55" tabindex="-1"></a>  }</span>
+<span id="cb3-56"><a href="index.html#cb3-56" tabindex="-1"></a>}</span>
+<span id="cb3-57"><a href="index.html#cb3-57" tabindex="-1"></a></span>
+<span id="cb3-58"><a href="index.html#cb3-58" tabindex="-1"></a><span class="co">#&#39; Variante de estilo_gradiente() que colorea por VALOR ABSOLUTO pero muestra</span></span>
+<span id="cb3-59"><a href="index.html#cb3-59" tabindex="-1"></a><span class="co">#&#39; el valor real (util para asimetria/curtosis, donde lo critico es alejarse</span></span>
+<span id="cb3-60"><a href="index.html#cb3-60" tabindex="-1"></a><span class="co">#&#39; de 0 en cualquier direccion). Equivale a gmap=abs(x) en pandas Styler.</span></span>
+<span id="cb3-61"><a href="index.html#cb3-61" tabindex="-1"></a>estilo_gradiente_abs <span class="ot">&lt;-</span> <span class="cf">function</span>(valores, paleta) {</span>
+<span id="cb3-62"><a href="index.html#cb3-62" tabindex="-1"></a>  rango <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fu">max</span>(<span class="fu">abs</span>(valores), <span class="at">na.rm =</span> <span class="cn">TRUE</span>))</span>
+<span id="cb3-63"><a href="index.html#cb3-63" tabindex="-1"></a>  mapa_color <span class="ot">&lt;-</span> scales<span class="sc">::</span><span class="fu">col_numeric</span>(paleta, <span class="at">domain =</span> rango)</span>
+<span id="cb3-64"><a href="index.html#cb3-64" tabindex="-1"></a>  <span class="cf">function</span>(value) {</span>
+<span id="cb3-65"><a href="index.html#cb3-65" tabindex="-1"></a>    <span class="fu">list</span>(<span class="at">background =</span> <span class="fu">mapa_color</span>(<span class="fu">abs</span>(value)), <span class="at">color =</span> PALETTE<span class="sc">$</span>texto)</span>
+<span id="cb3-66"><a href="index.html#cb3-66" tabindex="-1"></a>  }</span>
+<span id="cb3-67"><a href="index.html#cb3-67" tabindex="-1"></a>}</span>
+<span id="cb3-68"><a href="index.html#cb3-68" tabindex="-1"></a></span>
+<span id="cb3-69"><a href="index.html#cb3-69" tabindex="-1"></a><span class="co">#&#39; Muestra un subconjunto aleatorio (reproducible) para las trazas pesadas de</span></span>
+<span id="cb3-70"><a href="index.html#cb3-70" tabindex="-1"></a><span class="co">#&#39; plotly (histogramas/boxplots/violines/parcoords). Las tablas de estadisticos</span></span>
+<span id="cb3-71"><a href="index.html#cb3-71" tabindex="-1"></a><span class="co">#&#39; siempre se calculan aparte sobre los datos completos; esto solo aligera el</span></span>
+<span id="cb3-72"><a href="index.html#cb3-72" tabindex="-1"></a><span class="co">#&#39; peso de las figuras interactivas cuando n es muy grande (p. ej. 150k filas).</span></span>
+<span id="cb3-73"><a href="index.html#cb3-73" tabindex="-1"></a>muestra_grafico <span class="ot">&lt;-</span> <span class="cf">function</span>(x, <span class="at">max_n =</span> <span class="dv">20000</span>, <span class="at">seed =</span> <span class="dv">42</span>) {</span>
+<span id="cb3-74"><a href="index.html#cb3-74" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">NROW</span>(x) <span class="sc">&lt;=</span> max_n) <span class="fu">return</span>(x)</span>
+<span id="cb3-75"><a href="index.html#cb3-75" tabindex="-1"></a>  <span class="fu">set.seed</span>(seed)</span>
+<span id="cb3-76"><a href="index.html#cb3-76" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">is.null</span>(<span class="fu">dim</span>(x))) <span class="fu">sample</span>(x, max_n) <span class="cf">else</span> x[<span class="fu">sample</span>(<span class="fu">nrow</span>(x), max_n), , drop <span class="ot">=</span> <span class="cn">FALSE</span>]</span>
+<span id="cb3-77"><a href="index.html#cb3-77" tabindex="-1"></a>}</span></code></pre></div>
+</div>
+<div id="tipo-y-descripción-de-las-variables" class="section level2 hasAnchor" number="1.2">
+<h2><span class="header-section-number">1.2</span> Tipo y descripción de las variables<a href="index.html#tipo-y-descripci%C3%B3n-de-las-variables" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p>El conjunto de datos está compuesto por variables numéricas y una variable categórica binaria que representa el objetivo del análisis.</p>
+<ul>
+<li><p><strong>SeriousDlqin2yrs</strong> (Categórica binaria) indica si la persona presentó una morosidad grave durante los siguientes dos años. <strong>0 = No</strong> y <strong>1 = Sí</strong>.</p></li>
+<li><p><strong>RevolvingUtilizationOfUnsecuredLines</strong> (Numérica continua) representa el porcentaje de utilización de las líneas de crédito no garantizadas.</p></li>
+<li><p><strong>age</strong> (Numérica discreta) indica la edad de la persona en años.</p></li>
+<li><p><strong>NumberOfTime30-59DaysPastDueNotWorse</strong> (Numérica discreta) número de veces que la persona tuvo pagos atrasados entre 30 y 59 días.</p></li>
+<li><p><strong>DebtRatio</strong> (Numérica continua) representa la relación entre las obligaciones financieras y los ingresos de la persona.</p></li>
+<li><p><strong>MonthlyIncome</strong> (Numérica continua) indica el ingreso mensual de la persona.</p></li>
+<li><p><strong>NumberOfOpenCreditLinesAndLoans</strong> (Numérica discreta) cantidad de líneas de crédito y préstamos abiertos.</p></li>
+<li><p><strong>NumberOfTimes90DaysLate</strong> (Numérica discreta) número de veces que la persona tuvo pagos con más de 90 días de retraso.</p></li>
+<li><p><strong>NumberRealEstateLoansOrLines</strong> (Numérica discreta) cantidad de préstamos o líneas de crédito relacionados con bienes raíces.</p></li>
+<li><p><strong>NumberOfTime60-89DaysPastDueNotWorse</strong> (Numérica discreta) número de veces que la persona tuvo pagos atrasados entre 60 y 89 días.</p></li>
+<li><p><strong>NumberOfDependents</strong> (Numérica discreta) número de personas que dependen económicamente del cliente.</p></li>
+</ul>
+
+</div>
+</div>
+            </section>
+
+          </div>
+        </div>
+      </div>
+
+<a href="carga-datos.html" class="navigation navigation-next navigation-unique" aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+    </div>
+  </div>
+<script src="libs/gitbook-2.6.7/js/app.min.js"></script>
+<script src="libs/gitbook-2.6.7/js/clipboard.min.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-search.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-sharing.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-fontsettings.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-bookdown.js"></script>
+<script src="libs/gitbook-2.6.7/js/jquery.highlight.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-clipboard.js"></script>
+<script>
+gitbook.require(["gitbook"], function(gitbook) {
+gitbook.start({
+  "sharing": {
+    "github": false,
+    "facebook": true,
+    "twitter": true,
+    "linkedin": false,
+    "weibo": false,
+    "instapaper": false,
+    "vk": false,
+    "whatsapp": false,
+    "all": ["facebook", "twitter", "linkedin", "weibo", "instapaper"]
+  },
+  "fontsettings": {
+    "theme": "white",
+    "family": "sans",
+    "size": 2
+  },
+  "edit": {
+    "link": null,
+    "text": null
+  },
+  "history": {
+    "link": null,
+    "text": null
+  },
+  "view": {
+    "link": null,
+    "text": null
+  },
+  "download": null,
+  "search": {
+    "engine": "fuse",
+    "options": null
+  },
+  "toc": {
+    "collapse": "subsection"
+  }
+});
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    var src = "true";
+    if (src === "" || src === "true") src = "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/latest.js?config=TeX-MML-AM_CHTML";
+    if (location.protocol !== "file:")
+      if (/^https?:/.test(src))
+        src = src.replace(/^https?:/, '');
+    script.src = src;
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+</body>
+
+</html>
