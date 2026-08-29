@@ -133,16 +133,19 @@ vis_univariado <- function(datos, col, bins_options = c(20, 40, 60, 80, 100)) {
   }
 
   # CASO GENERAL: variable continua -- histograma+KDE a la izquierda, boxplot/violin a la derecha
-  # El KDE se calcula sobre la serie completa (density() es barato); las trazas
-  # de histograma/boxplot/violin usan una muestra para que el HTML no pese tanto.
-  serie_grafico <- muestra_grafico(serie)
+  # Los histogramas se precalculan con hist() sobre TODOS los datos (barras
+  # livianas, <=100 valores por traza en vez de guardar cada punto crudo 5
+  # veces); el KDE tambien usa la serie completa (density() es barato).
+  # Boxplot/violin sí se muestrean, porque plotly necesita los puntos crudos.
   n_hist <- length(bins_options)
+  serie_grafico <- muestra_grafico(serie, max_n = 5000)
 
   fig <- plot_ly()
   for (i in seq_along(bins_options)) {
     nb <- bins_options[i]
+    h <- hist(serie, breaks = nb, plot = FALSE)
     fig <- fig %>% add_trace(
-      x = serie_grafico, type = "histogram", nbinsx = nb,
+      x = h$mids, y = h$counts, type = "bar", width = diff(h$breaks),
       name = sprintf("Histograma (%d bins)", nb),
       marker = list(color = PALETTE$lavanda), opacity = 0.85,
       visible = (i == 1),
