@@ -57,8 +57,8 @@ vars_continuas <- setdiff(num_cols, vars_conteo)
 
 ```{r biv-dashboards-fn}
 dashboard_bivariado_continua <- function(datos, col) {
-  d0 <- datos[[col]][datos[[target]] == 0]
-  d1 <- datos[[col]][datos[[target]] == 1]
+  d0 <- muestra_grafico(datos[[col]][datos[[target]] == 0])
+  d1 <- muestra_grafico(datos[[col]][datos[[target]] == 1])
 
   plot_ly() %>%
     add_trace(y = d0, type = "violin", name = "No moroso (0)", box = list(visible = TRUE),

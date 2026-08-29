@@ -133,13 +133,16 @@ vis_univariado <- function(datos, col, bins_options = c(20, 40, 60, 80, 100)) {
   }
 
   # CASO GENERAL: variable continua -- histograma+KDE a la izquierda, boxplot/violin a la derecha
+  # El KDE se calcula sobre la serie completa (density() es barato); las trazas
+  # de histograma/boxplot/violin usan una muestra para que el HTML no pese tanto.
+  serie_grafico <- muestra_grafico(serie)
   n_hist <- length(bins_options)
 
   fig <- plot_ly()
   for (i in seq_along(bins_options)) {
     nb <- bins_options[i]
     fig <- fig %>% add_trace(
-      x = serie, type = "histogram", nbinsx = nb,
+      x = serie_grafico, type = "histogram", nbinsx = nb,
       name = sprintf("Histograma (%d bins)", nb),
       marker = list(color = PALETTE$lavanda), opacity = 0.85,
       visible = (i == 1),
@@ -157,11 +160,11 @@ vis_univariado <- function(datos, col, bins_options = c(20, 40, 60, 80, 100)) {
   )
 
   fig <- fig %>% add_trace(
-    y = serie, type = "box", name = col, marker = list(color = PALETTE$menta),
+    y = serie_grafico, type = "box", name = col, marker = list(color = PALETTE$menta),
     boxpoints = "outliers", visible = TRUE, xaxis = "x2", yaxis = "y3"
   )
   fig <- fig %>% add_trace(
-    y = serie, type = "violin", name = col, box = list(visible = TRUE), points = FALSE,
+    y = serie_grafico, type = "violin", name = col, box = list(visible = TRUE), points = FALSE,
     marker = list(color = PALETTE$malva), visible = FALSE, xaxis = "x2", yaxis = "y3"
   )
 

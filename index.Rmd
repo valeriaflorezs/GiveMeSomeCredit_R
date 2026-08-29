@@ -104,6 +104,16 @@ estilo_gradiente_abs <- function(valores, paleta) {
     list(background = mapa_color(abs(value)), color = PALETTE$texto)
   }
 }
+
+#' Muestra un subconjunto aleatorio (reproducible) para las trazas pesadas de
+#' plotly (histogramas/boxplots/violines/parcoords). Las tablas de estadisticos
+#' siempre se calculan aparte sobre los datos completos; esto solo aligera el
+#' peso de las figuras interactivas cuando n es muy grande (p. ej. 150k filas).
+muestra_grafico <- function(x, max_n = 20000, seed = 42) {
+  if (NROW(x) <= max_n) return(x)
+  set.seed(seed)
+  if (is.null(dim(x))) sample(x, max_n) else x[sample(nrow(x), max_n), , drop = FALSE]
+}
 ```
 
 ## Tipo y descripción de las variables

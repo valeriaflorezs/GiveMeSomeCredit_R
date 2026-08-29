@@ -92,6 +92,7 @@ d_plot <- df[cols_paralelas]
 d_plot$DebtRatio <- pmin(d_plot$DebtRatio, quantile(d_plot$DebtRatio, 0.99))
 d_plot$MonthlyIncome <- pmin(d_plot$MonthlyIncome, quantile(d_plot$MonthlyIncome, 0.99))
 d_plot$RevolvingUtilizationOfUnsecuredLines <- pmin(d_plot$RevolvingUtilizationOfUnsecuredLines, 2)
+d_plot <- muestra_grafico(d_plot)  # limitar filas para que el widget no pese demasiado
 
 plot_ly(
   type = "parcoords",
