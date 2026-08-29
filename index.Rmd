@@ -104,6 +104,7 @@ estilo_gradiente_abs <- function(valores, paleta) {
     list(background = mapa_color(abs(value)), color = PALETTE$texto)
   }
 }
+```
 
 ## Tipo y descripción de las variables
 
