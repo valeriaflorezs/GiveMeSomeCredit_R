@@ -1,0 +1,132 @@
+---
+title: "Give Me Some Credit — Análisis Exploratorio de Datos (EDA)"
+author: "Valeria Florez"
+date: "`r Sys.Date()`"
+site: bookdown::bookdown_site
+output: bookdown::gitbook
+documentclass: book
+---
+
+# Introducción {#index}
+
+Este conjunto de datos Give Me Some Credit, disponible en la plataforma Kaggle. El cual, corresponde a una competencia de predicción del riesgo crediticio, cuyo objetivo es analizar información financiera y de comportamiento de los clientes para determinar la probabilidad de que una persona presente dificultades financieras en el futuro. Asi mismo contiene información relacionada con diferentes características de los clientes, como su edad, ingresos mensuales, número de préstamos, utilización de líneas de crédito, historial de pagos y cantidad de veces que ha presentado retrasos en sus obligaciones financieras.
+
+La variable objetivo del dataset es **SeriousDlqin2yrs**, que indica si una persona experimentó una situación de morosidad grave durante los siguientes dos años. Esta variable permite plantear el problema como una tarea de clasificación binaria, donde se busca diferenciar entre clientes que presentaron **(1)** y que no presentaron **(0)** dificultades financieras graves.
+
+## Carga de librerías
+
+Paquetes necesarios (ejecutar una sola vez si no están instalados):
+
+```{r instalar-paquetes, eval=FALSE}
+install.packages(c("tidyverse", "plotly", "reactable", "scales",
+                    "randomForest", "fastshap", "bookdown"))
+```
+
+```{r setup, message=FALSE, warning=FALSE}
+library(tidyverse)   # readr, dplyr, tidyr, ggplot2, purrr
+library(plotly)      # graficos interactivos
+library(reactable)   # tablas interactivas con color
+library(scales)      # paletas y formateo de numeros
+library(randomForest) # modelo para la seccion de SHAP
+library(fastshap)     # valores SHAP aproximados
+
+knitr::opts_chunk$set(message = FALSE, warning = FALSE)
+options(scipen = 999)
+```
+
+Paleta de colores pastel (la misma en todo el libro, para mantener coherencia visual) y las escalas de color que usaremos en gráficos y tablas.
+
+```{r paleta}
+PALETTE <- list(
+  lila          = "#B39DDB", # variable binaria / clase "No moroso" (0)
+  lavanda       = "#C5CAE9", # histogramas
+  rosa          = "#F48FB1", # KDE / clase "Moroso" (1)
+  menta         = "#80CBC4", # boxplots / valores "sin problema"
+  malva         = "#CE93D8", # violines
+  morado_oscuro = "#5E35B1", # acentos y subtitulos
+  texto         = "#4A3E56", # titulos y texto de las graficas
+  fondo_boton   = "#F3E5F5", # fondo de botones interactivos
+  borde_boton   = "#E1BEE7", # borde de botones interactivos
+  alerta        = "#C62828"  # rojo de alerta para valores criticos
+)
+
+TITULO_FONT <- list(size = 18, color = PALETTE$texto)
+BOTON_ESTILO <- list(bgcolor = PALETTE$fondo_boton, bordercolor = PALETTE$borde_boton,
+                      font = list(size = 11, color = PALETTE$texto))
+
+# Escala divergente (matriz de correlacion, SHAP): morado oscuro <-> lavanda <-> rosa
+ESCALA_DIVERGENTE <- list(
+  list(0.0, PALETTE$morado_oscuro),
+  list(0.5, PALETTE$fondo_boton),
+  list(1.0, PALETTE$rosa)
+)
+
+# Escala secuencial de magnitud, sin connotacion buena/mala: lavanda -> lila -> morado oscuro
+ESCALA_MAGNITUD <- list(
+  list(0.0, PALETTE$fondo_boton),
+  list(0.5, PALETTE$lila),
+  list(1.0, PALETTE$morado_oscuro)
+)
+
+# Escala de alerta (0 = neutro, valores altos = criticos): lavanda -> rosa -> rojo
+ESCALA_ALERTA <- list(
+  list(0.0, PALETTE$fondo_boton),
+  list(0.5, PALETTE$rosa),
+  list(1.0, PALETTE$alerta)
+)
+
+# Vectores de color (para reactable / gradientes en tablas), construidos con la misma paleta pastel
+PAL_SEMAFORO    <- c(PALETTE$menta, PALETTE$fondo_boton, PALETTE$alerta)
+PAL_MAGNITUD    <- c(PALETTE$fondo_boton, PALETTE$lila, PALETTE$morado_oscuro)
+PAL_DISPERSION  <- c(PALETTE$fondo_boton, PALETTE$malva, PALETTE$morado_oscuro)
+PAL_ALERTA      <- c(PALETTE$fondo_boton, PALETTE$rosa, PALETTE$alerta)
+
+#' Genera una funcion de estilo de celda (para reactable::colDef) que reproduce
+#' un degradado de color tipo pandas Styler.background_gradient()
+#' @param valores vector numerico sobre el que se calcula el dominio del color
+#' @param paleta vector de colores (2 o mas) para scales::col_numeric
+#' @param dominio opcional, c(min, max) fijo en vez de range(valores)
+estilo_gradiente <- function(valores, paleta, dominio = NULL) {
+  rango <- if (is.null(dominio)) range(valores, na.rm = TRUE) else dominio
+  mapa_color <- scales::col_numeric(paleta, domain = rango)
+  function(value) {
+    list(background = mapa_color(value), color = PALETTE$texto)
+  }
+}
+
+#' Variante de estilo_gradiente() que colorea por VALOR ABSOLUTO pero muestra
+#' el valor real (util para asimetria/curtosis, donde lo critico es alejarse
+#' de 0 en cualquier direccion). Equivale a gmap=abs(x) en pandas Styler.
+estilo_gradiente_abs <- function(valores, paleta) {
+  rango <- c(0, max(abs(valores), na.rm = TRUE))
+  mapa_color <- scales::col_numeric(paleta, domain = rango)
+  function(value) {
+    list(background = mapa_color(abs(value)), color = PALETTE$texto)
+  }
+}
+
+## Tipo y descripción de las variables
+
+El conjunto de datos está compuesto por variables numéricas y una variable categórica binaria que representa el objetivo del análisis.
+
+* **SeriousDlqin2yrs** (Categórica binaria) indica si la persona presentó una morosidad grave durante los siguientes dos años. **0 = No** y **1 = Sí**.
+
+* **RevolvingUtilizationOfUnsecuredLines** (Numérica continua) representa el porcentaje de utilización de las líneas de crédito no garantizadas.
+
+* **age** (Numérica discreta) indica la edad de la persona en años.
+
+* **NumberOfTime30-59DaysPastDueNotWorse** (Numérica discreta) número de veces que la persona tuvo pagos atrasados entre 30 y 59 días.
+
+* **DebtRatio** (Numérica continua) representa la relación entre las obligaciones financieras y los ingresos de la persona.
+
+* **MonthlyIncome** (Numérica continua) indica el ingreso mensual de la persona.
+
+* **NumberOfOpenCreditLinesAndLoans** (Numérica discreta) cantidad de líneas de crédito y préstamos abiertos.
+
+* **NumberOfTimes90DaysLate** (Numérica discreta) número de veces que la persona tuvo pagos con más de 90 días de retraso.
+
+* **NumberRealEstateLoansOrLines** (Numérica discreta) cantidad de préstamos o líneas de crédito relacionados con bienes raíces.
+
+* **NumberOfTime60-89DaysPastDueNotWorse** (Numérica discreta) número de veces que la persona tuvo pagos atrasados entre 60 y 89 días.
+
+* **NumberOfDependents** (Numérica discreta) número de personas que dependen económicamente del cliente.

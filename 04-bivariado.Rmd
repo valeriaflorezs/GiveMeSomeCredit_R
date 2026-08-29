@@ -1,0 +1,148 @@
+# Análisis bivariado {#bivariado}
+
+## Pruebas de hipótesis y comparación de grupos
+
+Para cada variable independiente se compara el grupo morosos (`SeriousDlqin2yrs = 1`) contra no morosos (`= 0`) usando la prueba **Mann-Whitney U** (no paramétrica, apropiada dado que ninguna de estas variables es normal y todas presentan asimetría fuerte) y como referencia adicional, un **t-test de Welch** (que no asume varianzas iguales).
+
+```{r biv-tests}
+resultados_bivariado <- map_dfr(num_cols, function(col) {
+  g0 <- df[[col]][df[[target]] == 0]
+  g1 <- df[[col]][df[[target]] == 1]
+  g0 <- g0[!is.na(g0)]
+  g1 <- g1[!is.na(g1)]
+
+  mw <- wilcox.test(g0, g1, alternative = "two.sided", exact = FALSE)
+  tt <- t.test(g0, g1, alternative = "two.sided", var.equal = FALSE)
+
+  tibble(
+    variable = col,
+    media_no_moroso = mean(g0), media_moroso = mean(g1),
+    mediana_no_moroso = median(g0), mediana_moroso = median(g1),
+    mann_whitney_U = unname(mw$statistic), p_valor_mw = mw$p.value,
+    t_welch = unname(tt$statistic), p_valor_t = tt$p.value
+  )
+})
+
+reactable(
+  resultados_bivariado %>% mutate(across(where(is.numeric), ~ round(., 4))),
+  columns = list(
+    variable = colDef(name = "Variable", sticky = "left", minWidth = 220),
+    media_no_moroso = colDef(name = "Media no moroso", format = colFormat(separators = TRUE, digits = 2)),
+    media_moroso = colDef(name = "Media moroso", format = colFormat(separators = TRUE, digits = 2)),
+    mediana_no_moroso = colDef(name = "Mediana no moroso", format = colFormat(separators = TRUE, digits = 2)),
+    mediana_moroso = colDef(name = "Mediana moroso", format = colFormat(separators = TRUE, digits = 2)),
+    mann_whitney_U = colDef(name = "Mann-Whitney U", format = colFormat(separators = TRUE, digits = 0)),
+    p_valor_mw = colDef(name = "p-value (MW)", format = colFormat(digits = 4)),
+    t_welch = colDef(name = "t (Welch)", format = colFormat(digits = 2)),
+    p_valor_t = colDef(name = "p-value (t)", format = colFormat(digits = 4))
+  ),
+  defaultColDef = colDef(align = "center", minWidth = 110),
+  bordered = TRUE, striped = TRUE, highlight = TRUE, compact = TRUE,
+  defaultPageSize = 11
+)
+```
+
+Con 150 000 observaciones, casi cualquier diferencia es estadísticamente significativa (p ≈ 0), así que el valor de p por sí solo aporta poco. Lo relevante es la **magnitud** de la diferencia entre medianas/medias, eso es lo que se explora en los gráficos y en el insight de negocio de cada variable.
+
+## Visualizaciones segmentadas por morosidad
+
+```{r biv-vars}
+vars_conteo <- c(
+  "NumberOfTime30-59DaysPastDueNotWorse", "NumberOfTimes90DaysLate",
+  "NumberOfTime60-89DaysPastDueNotWorse", "NumberOfOpenCreditLinesAndLoans",
+  "NumberRealEstateLoansOrLines", "NumberOfDependents"
+)
+vars_continuas <- setdiff(num_cols, vars_conteo)
+```
+
+```{r biv-dashboards-fn}
+dashboard_bivariado_continua <- function(datos, col) {
+  d0 <- datos[[col]][datos[[target]] == 0]
+  d1 <- datos[[col]][datos[[target]] == 1]
+
+  plot_ly() %>%
+    add_trace(y = d0, type = "violin", name = "No moroso (0)", box = list(visible = TRUE),
+              meanline = list(visible = TRUE), points = FALSE, marker = list(color = PALETTE$lila),
+              legendgroup = "No moroso (0)", xaxis = "x", yaxis = "y") %>%
+    add_trace(y = d1, type = "violin", name = "Moroso (1)", box = list(visible = TRUE),
+              meanline = list(visible = TRUE), points = FALSE, marker = list(color = PALETTE$rosa),
+              legendgroup = "Moroso (1)", xaxis = "x", yaxis = "y") %>%
+    add_trace(x = d0, type = "histogram", name = "No moroso (0)", marker = list(color = PALETTE$lila),
+              opacity = 0.55, histnorm = "probability density", legendgroup = "No moroso (0)",
+              showlegend = FALSE, xaxis = "x2", yaxis = "y2") %>%
+    add_trace(x = d1, type = "histogram", name = "Moroso (1)", marker = list(color = PALETTE$rosa),
+              opacity = 0.55, histnorm = "probability density", legendgroup = "Moroso (1)",
+              showlegend = FALSE, xaxis = "x2", yaxis = "y2") %>%
+    layout(
+      title = list(text = sprintf("%s vs. %s", col, target), font = TITULO_FONT, x = 0.5, xanchor = "center"),
+      height = 460, barmode = "overlay",
+      xaxis  = list(domain = c(0, 0.45), title = ""),
+      yaxis  = list(title = col),
+      xaxis2 = list(domain = c(0.55, 1), title = col),
+      yaxis2 = list(title = "Densidad", anchor = "x2"),
+      annotations = list(
+        list(text = sprintf("%s por morosidad", col), x = 0.225, y = 1.05, xref = "paper", yref = "paper",
+             xanchor = "center", showarrow = FALSE, font = list(size = 13, color = PALETTE$morado_oscuro)),
+        list(text = sprintf("Distribución de %s segmentada", col), x = 0.775, y = 1.05, xref = "paper", yref = "paper",
+             xanchor = "center", showarrow = FALSE, font = list(size = 13, color = PALETTE$morado_oscuro))
+      ),
+      updatemenus = list(
+        c(list(type = "buttons", direction = "right", x = 0.0, y = 1.2, showactive = TRUE,
+               buttons = list(
+                 list(label = "Eje Y lineal", method = "relayout", args = list(list(`yaxis.type` = "linear"))),
+                 list(label = "Eje Y log", method = "relayout", args = list(list(`yaxis.type` = "log")))
+               )), BOTON_ESTILO)
+      )
+    )
+}
+
+dashboard_bivariado_conteo <- function(datos, col, max_nivel = 10) {
+  valores_capados <- pmin(datos[[col]], max_nivel)
+  tabla <- tibble(nivel = valores_capados, y = datos[[target]]) %>%
+    group_by(nivel) %>%
+    summarise(media = mean(y), n = n(), .groups = "drop") %>%
+    arrange(nivel) %>%
+    mutate(media_pct = media * 100)
+
+  etiquetas <- as.character(as.integer(tabla$nivel))
+  if (max(tabla$nivel) == max_nivel) etiquetas[length(etiquetas)] <- sprintf("%d+", max_nivel)
+  tabla$etiqueta <- factor(etiquetas, levels = etiquetas)
+
+  plot_ly(
+    data = tabla, x = ~etiqueta, y = ~media_pct, type = "bar",
+    marker = list(color = ~media_pct, colorscale = ESCALA_ALERTA),
+    customdata = ~n,
+    hovertemplate = paste0(col, ": %{x}<br>% morosidad: %{y:.2f}%<br>n clientes: %{customdata}<extra></extra>")
+  ) %>%
+    layout(
+      title = list(text = sprintf("%% de morosidad por nivel de %s", col), font = TITULO_FONT, x = 0.5, xanchor = "center"),
+      height = 420,
+      xaxis = list(title = col),
+      yaxis = list(title = "% morosos (SeriousDlqin2yrs=1)")
+    )
+}
+```
+
+```{r biv-graficos-continuas, results='asis'}
+htmltools::tagList(lapply(vars_continuas, function(col) dashboard_bivariado_continua(df, col)))
+```
+
+```{r biv-graficos-conteo, results='asis'}
+htmltools::tagList(lapply(vars_conteo, function(col) dashboard_bivariado_conteo(df, col)))
+```
+
+## Insight financiero por variable
+
+- **RevolvingUtilizationOfUnsecuredLines**: los morosos muestran una mediana de utilización notoriamente más alta que los no morosos. En escala log se aprecia que casi cualquier valor por encima de ~0.6-0.7 de utilización ya concentra una proporción de morosos superior al promedio: es una señal clásica de "estrés de liquidez" — cliente que depende de su cupo revolvente.
+
+- **age**: a menor edad, mayor tasa de morosidad; el riesgo cae de forma bastante monótona con la edad. Consistente con la intuición de negocio: clientes jóvenes tienen menos historial crediticio y colchón financiero.
+
+- **DebtRatio** y **MonthlyIncome**: ambas están dominadas por outliers extremos, así que la escala log es indispensable para leer el gráfico. Con esa transformación, los no morosos tienden a concentrarse en ingresos algo más altos y en un DebtRatio más moderado, aunque el solapamiento entre clases es considerable — ninguna de las dos variables por sí sola separa bien la clase.
+
+- **NumberOfTime30-59DaysPastDueNotWorse / 60-89 / 90DaysLate**: son, con diferencia, las variables más discriminantes del dataset. La tasa de morosidad salta de un solo dígito (%) en 0 atrasos previos a 40-60%+ apenas hay 1 o 2 atrasos, y se dispara aún más con 3+. Esto confirma la intuición financiera básica: el mejor predictor de mora futura es la mora pasada.
+
+- **NumberOfOpenCreditLinesAndLoans**: relación no monótona — la morosidad es algo más alta en clientes con muy pocas líneas (poco historial) y también sube levemente en clientes con demasiadas líneas abiertas (sobreendeudamiento), con un mínimo de riesgo en un rango intermedio.
+
+- **NumberRealEstateLoansOrLines**: tener 1-2 líneas hipotecarias se asocia a menor morosidad que tener 0 (indicio de estabilidad patrimonial) o tener 4+ (posible sobreapalancamiento).
+
+- **NumberOfDependents**: el riesgo de morosidad crece de forma leve pero consistente a medida que aumenta el número de dependientes, coherente con una mayor carga financiera del hogar.

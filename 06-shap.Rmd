@@ -1,0 +1,155 @@
+# PARTE 4: Interpretabilidad avanzada con SHAP {#shap}
+
+```{r shap-modelo}
+set.seed(42)
+
+# División estratificada 70/30 (mantiene la proporción de morosos en train y test)
+train_idx <- df %>%
+  mutate(.rowid = row_number()) %>%
+  group_by(.data[[target]]) %>%
+  slice_sample(prop = 0.7) %>%
+  pull(.rowid)
+
+X <- df[num_cols]
+y <- factor(df[[target]], levels = c(0, 1))
+
+X_train <- X[train_idx, ]
+y_train <- y[train_idx]
+X_test  <- X[-train_idx, ]
+y_test  <- y[-train_idx]
+
+# classwt inversamente proporcional a la frecuencia de cada clase, equivalente
+# a class_weight="balanced" de scikit-learn
+pesos_clase <- table(y_train)
+classwt <- as.numeric(sum(pesos_clase) / (length(pesos_clase) * pesos_clase))
+names(classwt) <- names(pesos_clase)
+
+modelo_rf <- randomForest(
+  x = X_train, y = y_train,
+  ntree = 200,     # n_estimators
+  maxnodes = 64,   # limita la profundidad, analogo a max_depth=6
+  nodesize = 50,   # min_samples_leaf
+  classwt = classwt
+)
+
+# Muestra para SHAP (el calculo exacto sobre 150k filas es costoso; una muestra representativa basta para el EDA)
+set.seed(42)
+idx_shap <- sample(seq_len(nrow(X_test)), size = min(2000, nrow(X_test)))
+X_shap <- X_test[idx_shap, ]
+
+pred_wrapper <- function(object, newdata) {
+  predict(object, newdata = newdata, type = "prob")[, "1"]
+}
+
+set.seed(42)
+shap_values <- fastshap::explain(
+  modelo_rf, X = X_train, pred_wrapper = pred_wrapper,
+  newdata = X_shap, nsim = 15  # numero de permutaciones Monte Carlo por instancia/variable
+)
+
+sv_df <- as.data.frame(shap_values)
+names(sv_df) <- num_cols
+dim(sv_df)
+```
+
+## Importancia global interactiva (mean |SHAP|)
+
+```{r shap-importancia}
+importancia <- sv_df %>%
+  summarise(across(everything(), ~ mean(abs(.)))) %>%
+  pivot_longer(everything(), names_to = "variable", values_to = "importancia") %>%
+  arrange(importancia)
+
+plot_ly(
+  data = importancia, x = ~importancia, y = ~reorder(variable, importancia), type = "bar", orientation = "h",
+  marker = list(color = ~importancia, colorscale = ESCALA_MAGNITUD)
+) %>%
+  layout(
+    title = list(text = "Importancia global de variables (SHAP) sobre P(SeriousDlqin2yrs=1)", font = TITULO_FONT),
+    height = 450, xaxis = list(title = "Impacto medio |SHAP|"), yaxis = list(title = "")
+  )
+```
+
+## Beeswarm interactivo (todas las variables)
+
+```{r shap-beeswarm}
+orden <- importancia %>% arrange(desc(importancia)) %>% pull(variable)  # de mayor a menor importancia
+
+set.seed(42)
+fig_beeswarm <- plot_ly()
+for (i in seq_along(orden)) {
+  col <- orden[i]
+  valores <- X_shap[[col]]
+  rng <- quantile(valores, c(0.01, 0.99), na.rm = TRUE)
+  color_norm <- pmin(pmax((valores - rng[1]) / (rng[2] - rng[1] + 1e-9), 0), 1)
+  jitter <- runif(length(valores), -0.35, 0.35)
+
+  fig_beeswarm <- fig_beeswarm %>% add_trace(
+    x = sv_df[[col]], y = (i - 1) + jitter, type = "scatter", mode = "markers",
+    marker = list(size = 5, color = color_norm, colorscale = ESCALA_DIVERGENTE,
+                  showscale = (i == 1),
+                  colorbar = if (i == 1) list(title = "Valor de la\nvariable (norm.)") else NULL,
+                  line = list(width = 0)),
+    customdata = valores,
+    hovertemplate = paste0(col, "<br>SHAP: %{x:.4f}<br>valor real: %{customdata:.2f}<extra></extra>"),
+    name = col, showlegend = FALSE
+  )
+}
+
+fig_beeswarm %>% layout(
+  title = list(text = "SHAP beeswarm — impacto de cada variable en P(morosidad)", font = TITULO_FONT),
+  height = 550,
+  yaxis = list(tickmode = "array", tickvals = seq_along(orden) - 1, ticktext = orden),
+  xaxis = list(title = "Valor SHAP (impacto sobre la predicción)"),
+  shapes = list(list(type = "line", x0 = 0, x1 = 0, y0 = 0, y1 = 1, yref = "paper",
+                      line = list(dash = "dash", color = PALETTE$texto)))
+)
+```
+
+## Gráfico de dependencia interactivo
+
+Dispersión del valor SHAP de una variable contra su valor real, coloreada por la variable con la que más interactúa (la de mayor correlación absoluta con ella). El menú desplegable permite cambiar la variable a inspeccionar sin recalcular nada.
+
+```{r shap-dependencia}
+fig_dep <- plot_ly()
+n_vars <- length(num_cols)
+
+for (i in seq_along(num_cols)) {
+  col <- num_cols[i]
+  corrs <- abs(corr_pearson[, col])
+  corrs[col] <- -Inf  # excluir la propia variable
+  col_interaccion <- names(which.max(corrs))
+
+  fig_dep <- fig_dep %>% add_trace(
+    x = X_shap[[col]], y = sv_df[[col]], type = "scatter", mode = "markers",
+    marker = list(size = 6, color = X_shap[[col_interaccion]], colorscale = ESCALA_MAGNITUD,
+                  showscale = TRUE, colorbar = list(title = col_interaccion)),
+    customdata = X_shap[[col_interaccion]],
+    hovertemplate = paste0(col, ": %{x:.2f}<br>SHAP: %{y:.4f}<br>",
+                            col_interaccion, ": %{customdata:.2f}<extra></extra>"),
+    visible = (i == 1), name = col
+  )
+}
+
+botones <- lapply(seq_along(num_cols), function(i) {
+  vis <- rep(FALSE, n_vars)
+  vis[i] <- TRUE
+  list(label = num_cols[i], method = "update",
+       args = list(list(visible = vis), list(`xaxis.title` = num_cols[i])))
+})
+
+fig_dep %>% layout(
+  title = list(text = sprintf("SHAP dependence plot — %s", num_cols[1]), font = TITULO_FONT),
+  height = 520,
+  xaxis = list(title = num_cols[1]), yaxis = list(title = "Valor SHAP"),
+  updatemenus = list(c(list(buttons = botones, direction = "down", x = 1.15, y = 1.0, showactive = TRUE), BOTON_ESTILO)),
+  shapes = list(list(type = "line", xref = "paper", x0 = 0, x1 = 1, y0 = 0, y1 = 0,
+                      line = list(dash = "dash", color = PALETTE$texto)))
+)
+```
+
+## Interpretabilidad
+
+- El ranking de importancia SHAP debería confirmar lo observado en el análisis bivariado: las variables de **mora histórica** (30-59, 60-89, 90+ días) y la **utilización revolvente** son, con diferencia, las que más empujan la predicción de morosidad, seguidas de `age` y `DebtRatio`.
+- El beeswarm permite ver la *dirección* del efecto: valores altos (color cálido) de las variables de mora y de utilización empujan el SHAP hacia la derecha (mayor probabilidad de morosidad), mientras que valores altos de `age` tienden a empujarlo hacia la izquierda (menor riesgo) — coherente con el insight de negocio de la sección bivariada.
+- Los gráficos de dependencia permiten detectar **no linealidades**: por ejemplo, es esperable que el efecto marginal de un atraso adicional en `NumberOfTime30-59DaysPastDueNotWorse` sea mucho mayor al pasar de 0 a 1 atraso que de 4 a 5 — información que un coeficiente lineal único (como en una regresión logística simple) no podría capturar, y que justifica considerar modelos no lineales o la creación de variables categóricas/bandera a partir de estos conteos.

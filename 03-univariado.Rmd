@@ -1,0 +1,239 @@
+# Análisis univariado detallado {#univariado}
+
+```{r univ-setup}
+target <- "SeriousDlqin2yrs"
+num_cols <- setdiff(names(df), target)
+todas_las_vars <- c(target, num_cols)
+todas_las_vars
+```
+
+## Estadísticos descriptivos completos
+
+```{r univ-helpers}
+# Coeficientes de asimetria (g1) y curtosis de exceso (g2), sin correccion de
+# sesgo: son las mismas formulas que usa scipy.stats.skew()/kurtosis() por defecto.
+skew_g1 <- function(x) {
+  m <- mean(x)
+  m2 <- mean((x - m)^2)
+  m3 <- mean((x - m)^3)
+  m3 / m2^1.5
+}
+
+kurt_g2 <- function(x) {
+  m <- mean(x)
+  m2 <- mean((x - m)^2)
+  m4 <- mean((x - m)^4)
+  m4 / m2^2 - 3
+}
+
+resumen_univariado <- function(serie) {
+  s <- serie[!is.na(serie)]
+  q1 <- unname(quantile(s, 0.25))
+  q3 <- unname(quantile(s, 0.75))
+  iqr <- q3 - q1
+  lim_inf <- q1 - 1.5 * iqr
+  lim_sup <- q3 + 1.5 * iqr
+  outliers_pct <- mean(s < lim_inf | s > lim_sup) * 100
+
+  tibble(
+    n = length(s),
+    pct_nulos = mean(is.na(serie)) * 100,
+    media = mean(s),
+    desv_estandar = sd(s),
+    mediana = median(s),
+    RIC = iqr,
+    min = min(s),
+    Q1 = q1,
+    Q3 = q3,
+    max = max(s),
+    asimetria = skew_g1(s),
+    curtosis = kurt_g2(s),
+    pct_outliers = outliers_pct
+  )
+}
+```
+
+```{r univ-tabla}
+tabla_univariada <- map_dfr(todas_las_vars, function(col) {
+  resumen_univariado(df[[col]]) %>% mutate(variable = col, .before = 1)
+}) %>%
+  mutate(across(where(is.numeric), ~ round(., 4)))
+
+reactable(
+  tabla_univariada,
+  columns = list(
+    variable = colDef(name = "Variable", sticky = "left"),
+    n = colDef(format = colFormat(separators = TRUE, digits = 0)),
+    pct_nulos = colDef(name = "% nulos", format = colFormat(suffix = "%", digits = 2),
+                        style = estilo_gradiente(c(0, 20), PAL_SEMAFORO, dominio = c(0, 20))),
+    media = colDef(format = colFormat(separators = TRUE, digits = 2),
+                    style = estilo_gradiente(tabla_univariada$media, PAL_MAGNITUD)),
+    desv_estandar = colDef(name = "Desv. estándar", format = colFormat(separators = TRUE, digits = 2),
+                            style = estilo_gradiente(tabla_univariada$desv_estandar, PAL_DISPERSION)),
+    mediana = colDef(format = colFormat(separators = TRUE, digits = 2),
+                      style = estilo_gradiente(tabla_univariada$mediana, PAL_MAGNITUD)),
+    RIC = colDef(format = colFormat(separators = TRUE, digits = 2),
+                 style = estilo_gradiente(tabla_univariada$RIC, PAL_DISPERSION)),
+    min = colDef(format = colFormat(separators = TRUE, digits = 2),
+                 style = estilo_gradiente(tabla_univariada$min, PAL_MAGNITUD)),
+    Q1 = colDef(format = colFormat(separators = TRUE, digits = 2),
+                style = estilo_gradiente(tabla_univariada$Q1, PAL_MAGNITUD)),
+    Q3 = colDef(format = colFormat(separators = TRUE, digits = 2),
+                style = estilo_gradiente(tabla_univariada$Q3, PAL_MAGNITUD)),
+    max = colDef(format = colFormat(separators = TRUE, digits = 2),
+                 style = estilo_gradiente(tabla_univariada$max, PAL_MAGNITUD)),
+    asimetria = colDef(name = "Asimetría (skew)", format = colFormat(digits = 2),
+                        style = estilo_gradiente_abs(tabla_univariada$asimetria, PAL_ALERTA)),
+    curtosis = colDef(format = colFormat(digits = 2),
+                       style = estilo_gradiente_abs(tabla_univariada$curtosis, PAL_ALERTA)),
+    pct_outliers = colDef(name = "% outliers (Tukey)", format = colFormat(suffix = "%", digits = 2),
+                           style = estilo_gradiente(c(0, 20), PAL_SEMAFORO, dominio = c(0, 20)))
+  ),
+  defaultColDef = colDef(align = "center", minWidth = 90),
+  bordered = TRUE, striped = TRUE, highlight = TRUE, compact = TRUE,
+  defaultPageSize = 11
+)
+```
+
+A partir de las medidas calculadas en la tabla podemos decir que:
+
+Las variables de historial de morosidad (`NumberOfTime30-59DaysPastDueNotWorse`, `NumberOfTimes90DaysLate` y `NumberOfTime60-89DaysPastDueNotWorse`) tienen una alta concentración de valores en cero en sus percentiles ($Q1$, mediana y $Q3$). Sin embargo, las tres comparten un valor máximo idéntico (98). Investigando el caso notamos que en realidad el 96 y 98 actuan como una codificación interna del banco para registros faltantes y no a un conteo real de esos eventos.
+
+En las variables financieras se observan magnitudes con distorsiones severas respecto a sus valores centrales. `RevolvingUtilizationOfUnsecuredLines` tiene una mediana de 0.15, pero registra un límite superior de 50,708 que eleva su desviación estándar a 249.76. Del mismo modo, `DebtRatio` presenta un 75% de sus datos por debajo de 0.87, pero alcanza un máximo de 329,664.00, acumulando un 20.87% de valores atípicos. Por su parte, `MonthlyIncome` refleja una mediana de 5,400.00 frente a un valor máximo de 3,008,750, lo que confirma una distribución asimétrica a la derecha con una larga cola de ingresos elevados.
+
+Por último, la variable `age` presenta la estructura más simétrica de la tabla, con una media y una mediana prácticamente iguales alrededor de los 52 años. No obstante, registra un valor mínimo de 0.00 años, lo cual es ilógico ya que una persona de 0 años no puede tener historial crediticio. Las demás variables relativas a créditos vigentes, préstamos inmobiliarios y número de dependientes muestran comportamientos esperados con asimetrías moderadas.
+
+## Visualización por variable
+
+```{r univ-vis-fn}
+vis_univariado <- function(datos, col, bins_options = c(20, 40, 60, 80, 100)) {
+  serie <- datos[[col]]
+  serie <- serie[!is.na(serie)]
+
+  # CASO ESPECIAL: variable binaria / pocos valores unicos
+  if (length(unique(serie)) <= 5) {
+    conteo <- as.data.frame(table(serie), stringsAsFactors = FALSE)
+    names(conteo) <- c("valor", "frecuencia")
+    conteo <- conteo[order(as.numeric(conteo$valor)), ]
+    conteo$etiqueta <- sprintf("%s (%.1f%%)", formatC(conteo$frecuencia, format = "d", big.mark = ","),
+                                conteo$frecuencia / length(serie) * 100)
+
+    fig <- plot_ly(
+      data = conteo, x = ~valor, y = ~frecuencia, type = "bar",
+      marker = list(color = PALETTE$lila),
+      text = ~etiqueta, textposition = "outside",
+      hovertemplate = paste0(col, ": %{x}<br>Frecuencia: %{y}<extra></extra>")
+    ) %>%
+      layout(
+        title = list(text = sprintf("Distribución de '%s'", col), font = TITULO_FONT, x = 0.02),
+        xaxis = list(title = col, type = "category"), yaxis = list(title = "Frecuencia"),
+        height = 420, margin = list(t = 80, b = 40, l = 60, r = 40)
+      )
+    return(fig)
+  }
+
+  # CASO GENERAL: variable continua -- histograma+KDE a la izquierda, boxplot/violin a la derecha
+  n_hist <- length(bins_options)
+
+  fig <- plot_ly()
+  for (i in seq_along(bins_options)) {
+    nb <- bins_options[i]
+    fig <- fig %>% add_trace(
+      x = serie, type = "histogram", nbinsx = nb,
+      name = sprintf("Histograma (%d bins)", nb),
+      marker = list(color = PALETTE$lavanda), opacity = 0.85,
+      visible = (i == 1),
+      hovertemplate = paste0(col, ": %{x}<br>Frecuencia: %{y}<extra></extra>"),
+      xaxis = "x", yaxis = "y"
+    )
+  }
+
+  dens <- density(serie, n = 300)
+  fig <- fig %>% add_trace(
+    x = dens$x, y = dens$y, type = "scatter", mode = "lines", name = "KDE",
+    line = list(color = PALETTE$rosa, width = 2.5),
+    hovertemplate = "valor: %{x:.2f}<br>densidad: %{y:.4f}<extra></extra>",
+    xaxis = "x", yaxis = "y2"
+  )
+
+  fig <- fig %>% add_trace(
+    y = serie, type = "box", name = col, marker = list(color = PALETTE$menta),
+    boxpoints = "outliers", visible = TRUE, xaxis = "x2", yaxis = "y3"
+  )
+  fig <- fig %>% add_trace(
+    y = serie, type = "violin", name = col, box = list(visible = TRUE), points = FALSE,
+    marker = list(color = PALETTE$malva), visible = FALSE, xaxis = "x2", yaxis = "y3"
+  )
+
+  idx_box <- n_hist + 1   # indice 0-based de la traza box (n_hist histogramas [0..n_hist-1] + 1 KDE)
+  idx_vio <- n_hist + 2
+
+  vis_estado <- function(h_idx, box = TRUE, vio = FALSE) {
+    c(seq_len(n_hist) == h_idx, TRUE, box, vio)
+  }
+
+  bins_buttons <- lapply(seq_along(bins_options), function(i) {
+    list(label = sprintf("%d bins", bins_options[i]), method = "update",
+         args = list(list(visible = vis_estado(i, box = TRUE, vio = FALSE))))
+  })
+
+  chart_buttons <- list(
+    list(label = "Boxplot", method = "update", args = list(list(visible = vis_estado(1, box = TRUE, vio = FALSE)))),
+    list(label = "Violin", method = "update", args = list(list(visible = vis_estado(1, box = FALSE, vio = TRUE))))
+  )
+
+  outlier_buttons <- list(
+    list(label = "Outliers: ON", method = "restyle", args = list(list(boxpoints = "outliers"), list(idx_box))),
+    list(label = "Outliers: OFF", method = "restyle", args = list(list(boxpoints = FALSE), list(idx_box)))
+  )
+
+  fig %>% layout(
+    title = list(text = sprintf("Distribución de '%s'", col), font = TITULO_FONT, x = 0.02, y = 0.97),
+    height = 540, showlegend = FALSE,
+    margin = list(t = 160, b = 40, l = 60, r = 40),
+    xaxis  = list(domain = c(0, 0.45), title = ""),
+    yaxis  = list(title = "Frecuencia", anchor = "x"),
+    yaxis2 = list(title = "Densidad (KDE)", overlaying = "y", side = "right"),
+    xaxis2 = list(domain = c(0.55, 1), title = ""),
+    yaxis3 = list(title = "", anchor = "x2"),
+    annotations = list(
+      list(text = "Histograma + KDE", x = 0.225, y = 1, xref = "paper", yref = "paper",
+           xanchor = "center", showarrow = FALSE, font = list(size = 13, color = PALETTE$morado_oscuro)),
+      list(text = "Boxplot / Violin", x = 0.775, y = 1, xref = "paper", yref = "paper",
+           xanchor = "center", showarrow = FALSE, font = list(size = 13, color = PALETTE$morado_oscuro))
+    ),
+    updatemenus = list(
+      c(list(type = "buttons", direction = "right", x = 0.0, y = 1.3, xanchor = "left", yanchor = "top",
+             buttons = bins_buttons, pad = list(r = 6, t = 4, b = 4), showactive = TRUE), BOTON_ESTILO),
+      c(list(type = "buttons", direction = "right", x = 0.58, y = 1.3, xanchor = "left", yanchor = "top",
+             buttons = chart_buttons, pad = list(r = 6, t = 4, b = 4), showactive = TRUE), BOTON_ESTILO),
+      c(list(type = "buttons", direction = "right", x = 0.78, y = 1.3, xanchor = "left", yanchor = "top",
+             buttons = outlier_buttons, pad = list(r = 6, t = 4, b = 4), showactive = TRUE), BOTON_ESTILO)
+    )
+  )
+}
+```
+
+```{r univ-graficos, results='asis'}
+htmltools::tagList(lapply(todas_las_vars, function(col) vis_univariado(df, col)))
+```
+
+## Interpretación
+
+- **SeriousDlqin2yrs** (objetivo): variable binaria con fuerte desbalance (~93% no morosos vs ~7% morosos, ver sección previa). Cualquier modelo posterior deberá corregir este desbalance (class_weight, SMOTE, umbral de decisión) para no sesgarse hacia la clase mayoritaria.
+
+- **RevolvingUtilizationOfUnsecuredLines**: en teoría es un porcentaje de utilización de línea de crédito y debería moverse entre 0 y 1, pero el máximo observado supera ampliamente ese rango (valores >1, algunos en las decenas o miles). La distribución está extremadamente sesgada a la derecha (skew alto), lo que sugiere errores de captura o clientes con líneas de crédito múltiples mal normalizadas; conviene winsorizar o transformar (log) antes de modelar.
+
+- **age**: distribución razonablemente simétrica y centrada entre 40-50 años, pero contiene al menos un registro con edad 0, lo cual es imposible y debe tratarse como dato faltante/erróneo, no como un valor válido.
+
+- **NumberOfTime30-59DaysPastDueNotWorse**, **NumberOfTimes90DaysLate**, **NumberOfTime60-89DaysPastDueNotWorse**: las tres comparten el mismo patrón — la gran mayoría de clientes está en 0, pero existen valores centinela de 96 y 98 que representan códigos especiales (no aplica / error de sistema) y no conteos reales de atrasos. Estos valores inflan artificialmente la media, la desviación estándar, la asimetría y la curtosis, y deben tratarse por separado (crear una bandera binaria y/o capar el valor) antes de usarlos en un modelo.
+
+- **DebtRatio**: sesgo a la derecha muy pronunciado, con una cola de valores extremos (por encima de 1, incluso de 10 000) que corresponden probablemente a divisiones por un ingreso mensual muy bajo o mal reportado. Es la variable con mayor necesidad de tratamiento de outliers (winsorización o transformación logarítmica) de todo el dataset.
+
+- **MonthlyIncome**: fuertemente sesgada a la derecha, típico de variables de ingreso; tras la imputación por mediana, además, se genera un pico artificial en el valor de la mediana que debe mencionarse como una limitación de la imputación simple.
+
+- **NumberOfOpenCreditLinesAndLoans**: distribución aproximadamente simétrica con cola derecha moderada; no muestra los códigos centinela de las variables de mora, por lo que es más confiable como variable de conteo real.
+
+- **NumberRealEstateLoansOrLines**: la mayoría de los clientes tiene 0, 1 o 2 líneas hipotecarias; unos pocos registros con valores muy altos (>20) son atípicos y probablemente errores de captura, no clientes reales con esa cantidad de propiedades.
+
+- **NumberOfDependents**: variable discreta concentrada en 0-2 dependientes, con cola derecha corta; tras imputar los nulos con la mediana (0) se refuerza aún más la moda en 0, lo que conviene reportar como limitación.

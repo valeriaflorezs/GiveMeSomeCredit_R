@@ -1,0 +1,92 @@
+# Carga y calidad de datos {#carga-datos}
+
+```{r cargar-datos}
+df <- read_csv("RDataSets/cs-training.csv") %>%
+  rename(id = 1) %>%
+  select(-id)
+
+head(df)
+```
+
+```{r dim-datos}
+cat(sprintf("El dataset tiene %d filas y %d columnas\n", nrow(df), ncol(df)))
+```
+
+```{r str-datos}
+glimpse(df)
+```
+
+## Valores faltantes
+
+```{r mapa-nulos}
+cols_con_nulos <- df %>%
+  summarise(across(everything(), ~ any(is.na(.)))) %>%
+  pivot_longer(everything()) %>%
+  filter(value) %>%
+  pull(name)
+
+if (length(cols_con_nulos) > 0) {
+  set.seed(42)
+  muestra <- df %>% slice_sample(n = min(3000, nrow(df)))
+
+  puntos_nulos <- muestra %>%
+    mutate(fila = row_number()) %>%
+    select(fila, all_of(cols_con_nulos)) %>%
+    pivot_longer(-fila, names_to = "columna", values_to = "valor") %>%
+    filter(is.na(valor))
+
+  fig_nulos <- plot_ly(
+    data = puntos_nulos, x = ~fila, y = ~columna,
+    type = "scatter", mode = "markers",
+    marker = list(color = PALETTE$alerta, size = 4, symbol = "line-ns", line = list(width = 1)),
+    hovertemplate = "%{y}<br>fila: %{x}<extra></extra>"
+  ) %>%
+    layout(
+      title = list(text = sprintf("Ubicación de valores nulos (muestra de %d filas)", nrow(muestra)), font = TITULO_FONT),
+      xaxis = list(title = "Fila (muestra)"),
+      yaxis = list(title = ""),
+      height = max(300, 150 + 40 * length(cols_con_nulos)),
+      plot_bgcolor = PALETTE$fondo_boton,
+      showlegend = FALSE
+    )
+
+  fig_nulos
+}
+```
+
+```{r tabla-nulos}
+nulos <- df %>%
+  summarise(across(everything(), ~ sum(is.na(.)))) %>%
+  pivot_longer(everything(), names_to = "columna", values_to = "cantidad_nulos") %>%
+  mutate(porcentaje = round(cantidad_nulos / nrow(df) * 100, 2))
+
+reactable(
+  nulos,
+  columns = list(
+    columna = colDef(name = "Columna"),
+    cantidad_nulos = colDef(name = "Cantidad Nulos", format = colFormat(separators = TRUE)),
+    porcentaje = colDef(
+      name = "Porcentaje (%)",
+      format = colFormat(suffix = "%", digits = 2),
+      style = estilo_gradiente(c(0, 20), PAL_SEMAFORO, dominio = c(0, 20))
+    )
+  ),
+  defaultPageSize = 12,
+  bordered = TRUE, striped = TRUE, highlight = TRUE,
+  defaultColDef = colDef(align = "center"),
+  compact = TRUE
+)
+
+total_duplicados <- sum(duplicated(df))
+cat(sprintf("Total de filas duplicadas en el dataset: %d\n", total_duplicados))
+```
+
+El mapa de valores faltantes muestra que la gran mayoría de las variables del dataset están completas. Únicamente dos variables presentan valores faltantes: MonthlyIncome, con un porcentaje considerable de nulos (19.82%), y NumberOfDependents, con un porcentaje bajo (2.62%). Dado que MonthlyIncome es una variable clave para evaluar capacidad de pago y riesgo crediticio, no se puede eliminar, se optará por imputar los valores faltantes usando la mediana, ya que los ingresos suelen tener distribución asimétrica, lo que hace que la mediana sea más robusta que la media frente a esos extremos. Para NumberOfDependents, al ser un porcentaje bajo de nulos, también se imputará con la mediana por consistencia.
+
+```{r imputar-nulos}
+df <- df %>%
+  mutate(
+    MonthlyIncome = replace_na(MonthlyIncome, median(MonthlyIncome, na.rm = TRUE)),
+    NumberOfDependents = replace_na(NumberOfDependents, median(NumberOfDependents, na.rm = TRUE))
+  )
+```

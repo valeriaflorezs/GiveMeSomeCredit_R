@@ -1,0 +1,12 @@
+book_filename: "book"
+output_dir: "docs"
+delete_merged_file: true
+rmd_files: [
+  "index.Rmd",
+  "01-carga-datos.Rmd",
+  "02-target.Rmd",
+  "03-univariado.Rmd",
+  "04-bivariado.Rmd",
+  "05-multicolinealidad.Rmd",
+  "06-shap.Rmd"
+]

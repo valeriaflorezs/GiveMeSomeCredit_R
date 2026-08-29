@@ -1,0 +1,30 @@
+# Análisis de la variable objetivo {#target}
+
+```{r tabla-target}
+tabla_target <- df %>%
+  count(SeriousDlqin2yrs, name = "n") %>%
+  mutate(porcentaje = round(n / sum(n) * 100, 2))
+
+tabla_target
+```
+
+```{r grafico-target}
+tabla_target_txt <- tabla_target %>%
+  mutate(clase = as.character(SeriousDlqin2yrs),
+         etiqueta = paste0(n, " (", porcentaje, "%)"))
+
+plot_ly(
+  data = tabla_target_txt, x = ~clase, y = ~n, color = ~clase,
+  colors = c("0" = PALETTE$lila, "1" = PALETTE$rosa),
+  type = "bar", text = ~etiqueta, textposition = "outside",
+  hovertemplate = "SeriousDlqin2yrs: %{x}<br>Clientes: %{y}<br><extra></extra>"
+) %>%
+  layout(
+    title = list(text = "Distribución de la variable objetivo", font = TITULO_FONT),
+    xaxis = list(title = "¿Tuvo morosidad grave? (SeriousDlqin2yrs)"),
+    yaxis = list(title = "Número de clientes"),
+    showlegend = FALSE
+  )
+```
+
+Se observa un desbalance fuerte en la variable objetivo: cerca del 93.3% de los clientes no presentó morosidad grave (clase 0) frente a sólo un 6.7% que sí la presentó (clase 1). Este desbalance deberá considerarse explícitamente en el modelamiento posterior (por ejemplo, mediante ponderación de clases, sobre/submuestreo o ajuste del umbral de decisión), ya que un modelo entrenado sin corregirlo tenderá a sesgarse hacia la clase mayoritaria y a subestimar el riesgo real de incumplimiento.

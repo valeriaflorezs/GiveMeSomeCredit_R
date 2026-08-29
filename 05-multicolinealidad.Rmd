@@ -1,0 +1,105 @@
+# Multicolinealidad {#multicolinealidad}
+
+## Matriz de correlación
+
+```{r corr-matriz}
+corr_pearson <- cor(df[num_cols], method = "pearson")
+corr_spearman <- cor(df[num_cols], method = "spearman")
+
+plot_ly(
+  x = colnames(corr_pearson), y = rownames(corr_pearson), z = corr_pearson,
+  type = "heatmap", colorscale = ESCALA_DIVERGENTE, zmid = 0, zmin = -1, zmax = 1,
+  text = round(corr_pearson, 2), texttemplate = "%{text}",
+  hovertemplate = "%{y} vs %{x}<br>correlación: %{z:.3f}<extra></extra>"
+) %>%
+  layout(
+    title = list(text = "Matriz de correlación entre variables independientes (Pearson)", font = TITULO_FONT),
+    height = 650,
+    updatemenus = list(
+      c(list(type = "buttons", direction = "right", x = 0.5, y = 1.15, showactive = TRUE,
+             buttons = list(
+               list(label = "Pearson", method = "update",
+                    args = list(list(z = list(corr_pearson), text = list(round(corr_pearson, 2))),
+                                list(title = "Matriz de correlación (Pearson)"))),
+               list(label = "Spearman", method = "update",
+                    args = list(list(z = list(corr_spearman), text = list(round(corr_spearman, 2))),
+                                list(title = "Matriz de correlación (Spearman)")))
+             )), BOTON_ESTILO)
+    )
+  )
+```
+
+Las tres variables de mora (30-59, 60-89, 90+ días) están correlacionadas entre sí de forma moderada alta miden fenómenos relacionados (historial de atrasos) desde distintas ventanas de tiempo, por lo que es esperable que compartan varianza. El resto de variables muestra correlaciones bajas entre sí, lo cual en principio es una buena noticia para un modelo lineal, pero la correlación de a pares no basta para descartar multicolinealidad, de ahí el VIF.
+
+## Factor de Inflación de la Varianza (VIF)
+
+```{r vif}
+X_std <- df[num_cols] %>%
+  mutate(across(everything(), ~ as.numeric(scale(.))))  # estandarizar mejora la estabilidad numerica del calculo
+
+calcular_vif <- function(datos) {
+  vars <- names(datos)
+  map_dfr(vars, function(v) {
+    formula_v <- as.formula(paste0("`", v, "` ~ ."))
+    r2 <- summary(lm(formula_v, data = datos))$r.squared
+    tibble(variable = v, VIF = 1 / (1 - r2))
+  })
+}
+
+vif_data <- calcular_vif(X_std) %>% arrange(desc(VIF))
+
+plot_ly(
+  data = vif_data, x = ~VIF, y = ~reorder(variable, VIF), type = "bar", orientation = "h",
+  marker = list(color = ~VIF, colorscale = ESCALA_ALERTA)
+) %>%
+  layout(
+    title = list(text = "Factor de Inflación de la Varianza (VIF) por variable", font = TITULO_FONT),
+    height = 450, yaxis = list(title = ""), xaxis = list(title = "VIF"),
+    shapes = list(
+      list(type = "line", x0 = 5, x1 = 5, y0 = 0, y1 = 1, yref = "paper",
+           line = list(dash = "dash", color = PALETTE$malva)),
+      list(type = "line", x0 = 10, x1 = 10, y0 = 0, y1 = 1, yref = "paper",
+           line = list(dash = "dash", color = PALETTE$alerta))
+    ),
+    annotations = list(
+      list(x = 5, y = 1, yref = "paper", text = "VIF = 5", showarrow = FALSE, yshift = 10),
+      list(x = 10, y = 1, yref = "paper", text = "VIF = 10", showarrow = FALSE, yshift = 10)
+    )
+  )
+
+reactable(
+  vif_data %>% mutate(VIF = round(VIF, 2)),
+  columns = list(variable = colDef(name = "Variable", minWidth = 220)),
+  defaultColDef = colDef(align = "center"),
+  bordered = TRUE, striped = TRUE, highlight = TRUE, compact = TRUE
+)
+```
+
+**Interpretación:** se espera que las tres variables de mora (`NumberOfTime30-59DaysPastDueNotWorse`, `NumberOfTime60-89DaysPastDueNotWorse`, `NumberOfTimes90DaysLate`) muestren el VIF más alto del conjunto, confirmando lo que ya insinuaba la matriz de correlación: comparten información redundante. Para un modelo lineal (regresión logística) conviene considerar quedarse con una sola de ellas, o construir una variable agregada (p. ej. "número total de atrasos históricos" o una bandera de "algún atraso"), en vez de las tres por separado. Para modelos basados en árboles (Random Forest, Gradient Boosting) la multicolinealidad es menos crítica para la performance predictiva, aunque sigue afectando la interpretación de la importancia de variables.
+
+## Coordenadas paralelas: interacción conjunta entre variables correlacionadas
+
+```{r parcoords}
+cols_paralelas <- c(
+  "RevolvingUtilizationOfUnsecuredLines", "NumberOfTime30-59DaysPastDueNotWorse",
+  "NumberOfTime60-89DaysPastDueNotWorse", "NumberOfTimes90DaysLate",
+  "DebtRatio", "MonthlyIncome", target
+)
+
+# Se capan las colas extremas solo para que la escala visual sea legible;
+# los valores originales en `df` no se modifican.
+d_plot <- df[cols_paralelas]
+d_plot$DebtRatio <- pmin(d_plot$DebtRatio, quantile(d_plot$DebtRatio, 0.99))
+d_plot$MonthlyIncome <- pmin(d_plot$MonthlyIncome, quantile(d_plot$MonthlyIncome, 0.99))
+d_plot$RevolvingUtilizationOfUnsecuredLines <- pmin(d_plot$RevolvingUtilizationOfUnsecuredLines, 2)
+
+plot_ly(
+  type = "parcoords",
+  line = list(color = d_plot[[target]], colorscale = list(list(0, PALETTE$lila), list(1, PALETTE$rosa))),
+  dimensions = lapply(cols_paralelas, function(col) list(label = col, values = d_plot[[col]]))
+) %>%
+  layout(
+    title = list(text = "Coordenadas paralelas: variables de mora, utilización, deuda e ingreso vs. morosidad", font = TITULO_FONT),
+    height = 550
+  )
+```

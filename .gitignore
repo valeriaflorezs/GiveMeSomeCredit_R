@@ -1,0 +1,7 @@
+book_files/
+book.Rmd
+book.knit.md
+*.Rproj.user/
+.Rhistory
+.RData
+.Rproj.user
